@@ -6,6 +6,6 @@ export const createChapChapConnection = async() => {
     console.log("database is " + connectionOptions.database)
     return createConnection({
         ...connectionOptions,
-        name: "chapchap"
+        name: "default"
     });
 }

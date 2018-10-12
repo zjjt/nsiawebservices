@@ -26,7 +26,8 @@ export class CONTRATS extends BaseEntity {
 
     @ManyToOne(type => CLIENT_UNIQUE, CLIENT_UNIQUE => CLIENT_UNIQUE.cONTRATSs, {nullable: false})
     @JoinColumn({name: 'IDE_CLIENT_UNIQUE'})
-    iDE_CLIENT_UNIQUE : CLIENT_UNIQUE | null | string;
+    @Column("varchar")
+    iDE_CLIENT_UNIQUE : string | null;
 
     @ManyToOne(type => TYPE_POLICE, TYPE_POLICE => TYPE_POLICE.cONTRATSs, {nullable: false})
     @JoinColumn({name: 'IDE_TYPE_POLICE'})
