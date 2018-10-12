@@ -1,0 +1,46 @@
+{
+    "name": "NsiaWebServices",
+    "version": "0.0.1",
+    "description": "Awesome project developed with TypeORM.",
+    "devDependencies": {
+        "@types/express": "^4.16.0",
+        "@types/jest": "^23.3.5",
+        "@types/node": "^8.0.29",
+        "@types/yup": "^0.24.9",
+        "jest": "^23.6.0",
+        "nodemon": "^1.18.4",
+        "ts-jest": "^23.10.4",
+        "ts-node": "^7.0.1",
+        "tslint": "^5.11.0",
+        "tslint-config-prettier": "^1.15.0",
+        "typescript": "^3.1.2"
+    },
+    "dependencies": {
+        "cors": "^2.8.4",
+        "dotenv": "^6.1.0",
+        "express": "^4.16.4",
+        "mssql": "^4.0.4",
+        "reflect-metadata": "^0.1.10",
+        "typeorm": "0.2.7",
+        "yup": "^0.26.6"
+    },
+    "scripts": {
+        "start": "NODE_ENV=development nodemon --exec ts-node src/index.ts",
+        "test": "NODE_ENV=test jest --watch --verbose"
+    },
+    "jest": {
+        "globalSetup": "./src/testSetup/callSetup.js",
+        "transform": {
+            "^.+\\.tsx?$": "ts-jest"
+        },
+        "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
+        "moduleFileExtensions": [
+            "ts",
+            "tsx",
+            "js",
+            "jsx",
+            "json",
+            "node"
+        ]
+    }
+}

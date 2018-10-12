@@ -1,0 +1,49 @@
+[{
+    "name": "developmentChapChap",
+    "type": "mssql",
+    "host": "10.10.3.65",
+    "port": "",
+    "username": "nsiavie",
+    "password": "nsiavie",
+    "database": "DB_EXTRANET_VIE",
+    "synchronize": false,
+    "logging": true,
+    "entities": [
+        "src/entity/**/*.ts"
+    ],
+    "migrations": [
+        "src/migration/**/*.ts"
+    ],
+    "subscribers": [
+        "src/subscriber/**/*.ts"
+    ],
+    "cli": {
+        "entitiesDir": "src/entity",
+        "migrationsDir": "src/migration",
+        "subscribersDir": "src/subscriber"
+    }
+}, {
+    "name": "testChapChap",
+    "type": "mssql",
+    "host": "10.10.3.65",
+    "port": "",
+    "username": "nsiavie",
+    "password": "nsiavie",
+    "database": "DB_EXTRANET_VIE_DEVELOPPEMENT",
+    "synchronize": false,
+    "logging": false,
+    "entities": [
+        "src/entity/**/*.ts"
+    ],
+    "migrations": [
+        "src/migration/**/*.ts"
+    ],
+    "subscribers": [
+        "src/subscriber/**/*.ts"
+    ],
+    "cli": {
+        "entitiesDir": "src/entity",
+        "migrationsDir": "src/migration",
+        "subscribersDir": "src/subscriber"
+    }
+}]
