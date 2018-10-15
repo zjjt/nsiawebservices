@@ -5,14 +5,15 @@ import { UTILISATEUR } from '../entity/chapchap/UTILISATEUR';
 
 export const apiRouter = express.Router();
 
-apiRouter.route('/file_attente/:num_police') // service d'identification du client sur le gestionnare de file d'attente
+apiRouter.route('/file_attente/:nom/:num_police') // service d'identification du client sur le gestionnare de file d'attente
     .get(async(req, res) => {
     const c = await CONTRATS.findOne({NUMERO_POLICE: req.params.num_police});
-   
+        console.log(`nom ${req.params.nom} police ${req.params.num_police}`);
     let result;
     if (c) {
-        console.dir(c);
-       const client = await CLIENT_UNIQUE.findOne({IDE_CLIENT_UNIQUE: c.iDE_CLIENT_UNIQUE as string});
+        //console.dir(c);
+       const client = await CLIENT_UNIQUE.findOne({IDE_CLIENT_UNIQUE: c.iDE_CLIENT_UNIQUE as string,NOM_CLIENT:req.params.nom });
+       //console.dir(client);
        let contrats=await CONTRATS.find({iDE_CLIENT_UNIQUE: c.iDE_CLIENT_UNIQUE as string});
        const loginDtails=await UTILISATEUR.findOne({IDE_CLIENT_UNIQUE: c.iDE_CLIENT_UNIQUE});
        //remove duplicates from contrats array
@@ -40,7 +41,7 @@ apiRouter.route('/file_attente/:num_police') // service d'identification du clie
     //await res.json("ok");
     //console.log(JSON.stringify(result));
     return c
-        ? res.json(result)
+        ? res.json(result?result:"not working")
         : res.json("not working");
 
 })

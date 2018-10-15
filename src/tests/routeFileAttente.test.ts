@@ -1,7 +1,8 @@
 import makeDBconnexion from '../typeORM/connector';
 import {CONTRATS} from '../entity/chapchap/CONTRATS'; 
 import {CLIENT_UNIQUE} from '../entity/chapchap/CLIENT_UNIQUE';
- import { UTILISATEUR } from '../entity/chapchap/UTILISATEUR';
+import { UTILISATEUR } from '../entity/chapchap/UTILISATEUR';
+import fetch from 'node-fetch';
 
 beforeAll(async()=>{
     await makeDBconnexion();
@@ -34,6 +35,25 @@ describe("Identification d'un client dans le logiciel de file d'attente",async()
             
             
 
+        }
+        
+    });
+
+    test("checks if we can query the api endpoint and get result for test client",async ()=>{
+         
+        const result=await fetch(`http://${process.env.HOST}:${process.env.PORT}/file_attente/morokro/21624981`).then(res=>res.json()).catch(err=>console.error(err));
+        if(result){
+            console.dir(result)
+            expect(result.identifiant_unique).toBe("CI694571")
+        }
+        
+    });
+    test("checks if we can query the api endpoint and get result for bad test client",async ()=>{
+         //j'ai fait expres de me tromper sur le nom du client pour tester la syntaxe
+        const result=await fetch(`http://${process.env.HOST}:${process.env.PORT}/file_attente/moroko/21624981`).then(res=>res.json()).catch(err=>console.error(err));
+        if(result){
+            console.dir(result)
+            expect(result).toBe("not working")
         }
         
     });
