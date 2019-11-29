@@ -1,5 +1,5 @@
 [{
-    "name": "developmentChapChap",
+    "name": "productionChapChap",
     "type": "mssql",
     "host": "10.10.3.65",
     "port": "",
@@ -45,5 +45,57 @@
         "entitiesDir": "src/entity",
         "migrationsDir": "src/migration",
         "subscribersDir": "src/subscriber"
+    }
+},{
+    "name": "productionSunshine",
+    "type": "mssql",
+    "host": "10.8.3.29",
+    "port": 57055,
+    "username": "reportvie",
+    "password": "reportvie",
+    "database": "SUN_COTEDIVOIRE",
+    "connectionTimeout": 3500000,
+    "requestTimeout": 3500000,
+    "synchronize": false,
+    "logging": true,
+    "entities": [
+        "src/entity/sunshine/**/*.ts"
+    ],
+    "migrations": [
+        "src/migration/sunshine/**/*.ts"
+    ],
+    "subscribers": [
+        "src/subscriber/sunshine/**/*.ts"
+    ],
+    "cli": {
+        "entitiesDir": "src/entity/sunshine",
+        "migrationsDir": "src/migration/sunshine",
+        "subscribersDir": "src/subscriber/sunshine"
+    }
+}, {
+    "name": "testSunshine",
+    "type": "mssql",
+    "host": "10.8.3.29",
+    "port": 57055,
+    "username": "reportvie",
+    "password": "reportvie",
+    "database": "SUNDB_RCI",
+    "connectionTimeout": 3500000,
+    "requestTimeout": 3500000,
+    "synchronize": false,
+    "logging": false,
+    "entities": [
+        "src/entity/sunshine/**/*.ts"
+    ],
+    "migrations": [
+        "src/migration/sunshine/**/*.ts"
+    ],
+    "subscribers": [
+        "src/subscriber/sunshine/**/*.ts"
+    ],
+    "cli": {
+        "entitiesDir": "src/entity/sunshine",
+        "migrationsDir": "src/migration/sunshine",
+        "subscribersDir": "src/subscriber/sunshine"
     }
 }]

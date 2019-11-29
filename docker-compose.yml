@@ -1,9 +1,30 @@
-app:
-  image: nsiaviewebservices
-  ports:
-    - "84:3000"
-  environment:
-    - HOST=http://localhost
-    - NODE_ENV=development
-    - PORT=3000
-  restart: always
+version: "3"
+
+services:
+  redis:
+    image: redis
+    container_name: wscache
+    expose:
+      - "6379"
+  webservices:
+    image: nsiawebservices:latest
+    #container_name: nsiawebservices
+    expose:
+      - "3000"
+    environment:
+      - HOST=http://localhost
+      - NODE_ENV=production
+      - PORT=3000
+      - NGINXHOST=10.11.100.48:8090
+    depends_on:
+      - redis
+    restart: always
+  nginx:
+    image: nginx:latest
+    volumes: 
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - webservices
+    ports:
+      - "84:4000"
+    restart: always
