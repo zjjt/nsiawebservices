@@ -15,7 +15,7 @@ services:
       - HOST=http://localhost
       - NODE_ENV=production
       - PORT=3000
-      - NGINXHOST=10.11.100.48:8090
+      - NGINXHOST=10.11.100.48:8084
     depends_on:
       - redis
     restart: always

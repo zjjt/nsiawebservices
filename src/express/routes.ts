@@ -538,12 +538,7 @@ apiRouter.route('/monthlyImpaye/').get(async(req,res)=>{
     result?res.json(result):res.json({error:"not working"});
 });
 //WS BORNE DISPOREG
-apiRouter.route('/etatCotisation/:num_police').get(cache.route({
-    expire:{
-        200:604800,//une semaine
-        xxx:1,
-    }
-}),async(req,res)=>{
+apiRouter.route('/etatCotisationNOCACHE/:num_police').get(async(req,res)=>{
     let result;
     let query=`exec dbo.wsi_cotisation @POLICE=${req.params.num_police}`;
     let etatCotisation=await getConnection("sunshine").manager.query(query);
@@ -558,7 +553,7 @@ apiRouter.route('/etatCotisation/:num_police').get(cache.route({
                 "DateQuittance": e.DATE_QUITTANCE,
                 "DebutPeriode": e.PERIODE_QUITTANCE,
                 "EcheanceAvanceImpaye": 0,
-                "EtatQuittance": e.ETAT_QUITTANCE=="SOLDEES"?"Soldée":e.ETAT_QUITTANCE=="IMPAYE EN ATTENTE RETOUR BANQUE"?"Attente retour banque":"Impayé",
+                "EtatQuittance": e.ETAT_QUITTANCE=="SOLDEES"?"Soldée":e.ETAT_QUITTANCE=="IMPAYE EN ATTENTE RETOUR BANQUE"?"Attente retour banque":"Impayée",
                 "FinPeriode": e.PERIODE_FIN_QUITTANCE,
                 "FraisRejet": 0,
                 "MontantCotise": e.ETAT_QUITTANCE=="SOLDEES"?parseInt(e.PRIME):0,
@@ -598,6 +593,8 @@ apiRouter.route('/etatCotisation/:num_police').get(cache.route({
                 "CodePaiement": etatCotisation[etatCotisation.length-1].MODE_REGLEMENT.toString().substring(0,1),
                 "CodeProduit": etatCotisation[etatCotisation.length-1].NUMEROPOLICE.toString().substring(0,3),
                 "Cotisations":cotisations,
+                "DateDebutEffet":etatCotisation[etatCotisation.length-1].DATE_DEBUT_EFFET,
+                "DateFinEffet":etatCotisation[etatCotisation.length-1].DATE_FIN_EFFET,
                 "DateDemande":moment().format("DD/MM/YYYY"),
                 "Fractionnement":etatCotisation[etatCotisation.length-1].FRACTIONNEMENT=="MENSUELLE"?"MENSUEL":etatCotisation[etatCotisation.length-1].FRACTIONNEMENT=="TRIMESTRIELLE"?"TRIMESTRIEL":etatCotisation[etatCotisation.length-1].FRACTIONNEMENT=="SEMESTRIELLE"?"SEMESTRIEL":"ANNUEL",
                 "LibelleProduit":etatCotisation[etatCotisation.length-1].LIBELLEPRODUIT,
@@ -609,7 +606,124 @@ apiRouter.route('/etatCotisation/:num_police').get(cache.route({
                 "TotalEcheanceAvance":0,
                 "TotalMontantCotise":parseInt(etatCotisation[etatCotisation.length-1].MONTANT_SOLDEES),
                 "TotalMontantEncaisse":parseInt(etatCotisation[etatCotisation.length-1].MONTANT_SOLDEES),
-                "TotalMontantImpaye":parseInt(etatCotisation[etatCotisation.length-1].MONTANT_IMPAYES)
+                "TotalMontantImpaye":etatCotisation[etatCotisation.length-1].MONTANT_IMPAYES!=null?parseInt(etatCotisation[etatCotisation.length-1].MONTANT_IMPAYES):0
+            },
+            "Payeur":{
+                "CodeErreur":null,
+                "Message":null,
+                "AdressePostale":etatCotisation[etatCotisation.length-1].ADDRESSE_PAYEUR,
+                "Civilite":etatCotisation[etatCotisation.length-1].CIVILITE_PAYEUR,
+                "DateNaissance":null,
+                "Identifiant":null,
+                "LieuNaissance":null,
+                "Nom":etatCotisation[etatCotisation.length-1].NOM_PAYEUR,
+                "Numero":etatCotisation[etatCotisation.length-1].NUMERO_PAYEUR.toString(),
+                "Prenoms":etatCotisation[etatCotisation.length-1].PRENOMS_PAYEUR,
+                "Profession":etatCotisation[etatCotisation.length-1].PROFESSION_PAYEUR,
+                "Telephone":etatCotisation[etatCotisation.length-1].TELEPHONE_PAYEUR,
+            },
+            "Souscripteur":{
+                "CodeErreur":null,
+                "Message":null,
+                "AdressePostale":etatCotisation[etatCotisation.length-1].ADDRESSE_CLIENT,
+                "Civilite":etatCotisation[etatCotisation.length-1].CIVILITE_SOUSCRIPTEUR,
+                "DateNaissance":etatCotisation[etatCotisation.length-1].DATE_NAISSANCE_CLIENT,
+                "Identifiant":null,
+                "LieuNaissance":etatCotisation[etatCotisation.length-1].LIEU_NAISSANCE_CLIENT,
+                "Nom":etatCotisation[etatCotisation.length-1].NOM_SOUSCRIPTEUR,
+                "Numero":etatCotisation[etatCotisation.length-1].NUMERO_SOUSCRIPTEUR.toString(),
+                "Prenoms":etatCotisation[etatCotisation.length-1].PRENOMS,
+                "Profession":etatCotisation[etatCotisation.length-1].PROFESSION_CLIENT,
+                "Telephone":etatCotisation[etatCotisation.length-1].TELEPHONE_CLIENT,
+            }
+            
+        }
+        result=finalObj;
+        console.dir(result);
+        return res.status(200).json(result);
+    }
+    // result= await axios.get(`http://nsia-sun-app:5000/production/ServiceSunshine.svc/etatcotisation?pol=${req.params.num_police}`);
+    // console.dir(result);
+    // return res.json(result.data);
+    result={
+        error:"could not request for this police"
+    }
+    return res.json(result);
+});
+apiRouter.route('/etatCotisation/:num_police').get(cache.route({
+    expire:{
+        200:604800,//une semaine
+        xxx:1,
+    }
+}),async(req,res)=>{
+    let result;
+    let query=`exec dbo.wsi_cotisation @POLICE=${req.params.num_police}`;
+    let etatCotisation=await getConnection("sunshine").manager.query(query);
+    if(etatCotisation.length>0){
+        console.log("getting etat de cotisation de police "+req.params.num_police);
+        //console.dir(etatCotisation);
+        let cotisations:any=[];
+        etatCotisation.forEach((e:any,i:any,arr)=>{
+            let final={
+                "CodeEtat": 100,
+                "DateComptable": e.DATE_COMPTABLE,
+                "DateQuittance": e.DATE_QUITTANCE,
+                "DebutPeriode": e.PERIODE_QUITTANCE,
+                "EcheanceAvanceImpaye": 0,
+                "EtatQuittance": e.ETAT_QUITTANCE=="SOLDEES"?"Soldée":e.ETAT_QUITTANCE=="IMPAYE EN ATTENTE RETOUR BANQUE"?"Attente retour banque":"Impayée",
+                "FinPeriode": e.PERIODE_FIN_QUITTANCE,
+                "FraisRejet": 0,
+                "MontantCotise": e.ETAT_QUITTANCE=="SOLDEES"?parseInt(e.PRIME):0,
+                "MontantEcheanceAvance": 0,
+                "MontantEmis": parseInt(e.PRIME),
+                "MontantEncaisse": e.ETAT_QUITTANCE=="SOLDEES"?parseInt(e.PRIME):0,
+                "MontantImpaye": e.ETAT_QUITTANCE=="IMPAYE EN ATTENTE RETOUR BANQUE"||e.ETAT_QUITTANCE=="IMPAYES"?parseInt(e.MONTANT_IMPAYES):0,
+                "MontantPrime": parseInt(e.PRIME),
+                "MontantRegularise": 0,
+                "NombreQuittanceImpayee": 0,
+                "NombreQuittanceSoldee": 0,
+                "NumeroQuittance": parseInt(e.QUITTANCE),
+                "PrimePeriodique": parseInt(e.PRIME)
+            };
+            cotisations.push(final);
+        });
+        let finalObj={
+            "CodeErreur":null,
+            "Message":null,
+            "Assure":{
+                "CodeErreur":null,
+                "Message":null,
+                "AdressePostale":etatCotisation[etatCotisation.length-1].ADRESSE_CLIENT,
+                "Civilite":etatCotisation[etatCotisation.length-1].CIVILITE_SOUSCRIPTEUR,
+                "DateNaissance":etatCotisation[etatCotisation.length-1].DATE_NAISSANCE_CLIENT,
+                "Identifiant":etatCotisation[etatCotisation.length-1].NUMERO_SOUSCRIPTEUR,
+                "Nom": `${etatCotisation[etatCotisation.length-1].NOM_SOUSCRIPTEUR} ${etatCotisation[etatCotisation.length-1].PRENOMS}`,
+                "Numero": etatCotisation[etatCotisation.length-1].NUMERO_SOUSCRIPTEUR.toString(),
+                "Prenoms": null,
+                "Profession": etatCotisation[etatCotisation.length-1].PROFESSION_CLIENT,
+                "Telephone": etatCotisation[etatCotisation.length-1].TELEPHONE_CLIENT
+            },
+            "Contrat":{
+                "CodeErreur": null,
+                "Message": null,
+                "CodeFiliale": "CI_VIE",
+                "CodePaiement": etatCotisation[etatCotisation.length-1].MODE_REGLEMENT.toString().substring(0,1),
+                "CodeProduit": etatCotisation[etatCotisation.length-1].NUMEROPOLICE.toString().substring(0,3),
+                "Cotisations":cotisations,
+                "DateDebutEffet":etatCotisation[etatCotisation.length-1].DATE_DEBUT_EFFET,
+                "DateFinEffet":etatCotisation[etatCotisation.length-1].DATE_FIN_EFFET,
+                "DateDemande":moment().format("DD/MM/YYYY"),
+                "Fractionnement":etatCotisation[etatCotisation.length-1].FRACTIONNEMENT=="MENSUELLE"?"MENSUEL":etatCotisation[etatCotisation.length-1].FRACTIONNEMENT=="TRIMESTRIELLE"?"TRIMESTRIEL":etatCotisation[etatCotisation.length-1].FRACTIONNEMENT=="SEMESTRIELLE"?"SEMESTRIEL":"ANNUEL",
+                "LibelleProduit":etatCotisation[etatCotisation.length-1].LIBELLEPRODUIT,
+                "ModeReglement":etatCotisation[etatCotisation.length-1].MODE_REGLEMENT,
+                "NombreQuittanceImpayees":parseInt(etatCotisation[etatCotisation.length-1].NOMBRE_IMPAYES),
+                "NombreQuittanceSoldees":parseInt(etatCotisation[etatCotisation.length-1].NOMBRE_SOLDEES),
+                "NumeroPolice":parseInt(etatCotisation[etatCotisation.length-1].NUMEROPOLICE),
+                "Periodicite":etatCotisation[etatCotisation.length-1].FRACTIONNEMENT=="MENSUELLE"?"MENSUEL":etatCotisation[etatCotisation.length-1].FRACTIONNEMENT=="TRIMESTRIELLE"?"TRIMESTRIEL":etatCotisation[etatCotisation.length-1].FRACTIONNEMENT=="SEMESTRIELLE"?"SEMESTRIEL":"ANNUEL",
+                "TotalEcheanceAvance":0,
+                "TotalMontantCotise":parseInt(etatCotisation[etatCotisation.length-1].MONTANT_SOLDEES),
+                "TotalMontantEncaisse":parseInt(etatCotisation[etatCotisation.length-1].MONTANT_SOLDEES),
+                "TotalMontantImpaye":etatCotisation[etatCotisation.length-1].MONTANT_IMPAYES!=null?parseInt(etatCotisation[etatCotisation.length-1].MONTANT_IMPAYES):0
             },
             "Payeur":{
                 "CodeErreur":null,
@@ -741,6 +855,9 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                 let query=``;
                 let q1=`select wnrgt as Numero_reglement,
                 wnupo as police,
+                cheque,
+                wasrg as assure
+                date_naiss,
                 nom_beneficiaire,
                 date_depot_treso,
                 date_sort_treso,
@@ -750,7 +867,7 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                 dateRDV,
                 Num_envoi,
                 statut_reg_retirer as statut,
-                domaine,redac,
+                domaine,redac,banque,
                 MNTGT as montant,MRGGT as mode_reglement
         from exp.regdispo where wnupo=${parseInt(req.params.num_police,10)}`;
         let r1=await getConnection("sunshine").manager.query(q1);
@@ -759,6 +876,9 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                 case "I":
                 query=`WITH TP AS (select wnrgt as Numero_reglement,
                     wnupo as police,
+                    cheque,
+                    wasrg as assure,
+                    date_naiss,
                     nom_beneficiaire,
                     date_depot_treso,
                     date_sort_treso,
@@ -768,7 +888,7 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                     dateRDV,
                     Num_envoi,
                     statut_reg_retirer as statut,
-                    domaine,redac,
+                    domaine,redac,banque,
                     MNTGT as montant,MRGGT as mode_reglement
                     from exp.regdispo where wnupo=${parseInt(req.params.num_police,10)})
                     SELECT * FROM TP X JOIN (SELECT  
@@ -834,6 +954,9 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                 case "G":
                 query=`WITH TP AS (select wnrgt as Numero_reglement,
                     wnupo as police,
+                    cheque,
+                    wasrg as assure,
+                    date_naiss,
                     nom_beneficiaire,
                     date_depot_treso,
                     date_sort_treso,
@@ -843,7 +966,7 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                     dateRDV,
                     Num_envoi,
                     statut_reg_retirer as statut,
-                    domaine,redac,
+                    domaine,redac,banque,
                     MNTGT as montant,MRGGT as mode_reglement
                     from exp.regdispo where wnupo=${parseInt(req.params.num_police,10)})
                     SELECT * FROM TP X JOIN (SELECT  
@@ -909,6 +1032,9 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                 case "R":
                 query=`WITH TP AS (select wnrgt as Numero_reglement,
                     wnupo as police,
+                    cheque,
+                    wasrg as assure,
+                    date_naiss,
                     nom_beneficiaire,
                     date_depot_treso,
                     date_sort_treso,
@@ -918,7 +1044,7 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                     dateRDV,
                     Num_envoi,
                     statut_reg_retirer as statut,
-                    domaine,redac,
+                    domaine,redac,banque,
                     MNTGT as montant,MRGGT as mode_reglement
                     from exp.regdispo where wnupo=${parseInt(req.params.num_police,10)})
                     SELECT * FROM TP X JOIN (SELECT  
@@ -1003,6 +1129,9 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                 let domaineQueries=[`
                     WITH TP AS (select wnrgt as Numero_reglement,
                         wnupo as police,
+                        cheque,
+                        wasrg as assure,
+                        date_naiss,
                         nom_beneficiaire,
                         date_depot_treso,
                         date_sort_treso,
@@ -1012,7 +1141,7 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                         dateRDV,
                         Num_envoi,
                         statut_reg_retirer as statut,
-                        domaine,redac,
+                        domaine,redac,banque,
                         MNTGT as montant,MRGGT as mode_reglement
                 from exp.regdispo where domaine = 'I' and wnupo=${parseInt(req.params.num_police,10)})
                 SELECT * FROM TP X JOIN (SELECT  
@@ -1077,6 +1206,9 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                     `,`
                     WITH TP AS (select wnrgt as Numero_reglement,
                         wnupo as police,
+                        cheque,
+                        wasrg as assure,
+                        date_naiss,
                         nom_beneficiaire,
                         date_depot_treso,
                         date_sort_treso,
@@ -1086,7 +1218,7 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                         dateRDV,
                         Num_envoi,
                         statut_reg_retirer as statut,
-                        domaine,redac,
+                        domaine,redac,banque,
                         MNTGT as montant,MRGGT as mode_reglement
                 from exp.regdispo where domaine = 'G' and wnupo=${parseInt(req.params.num_police,10)})
                 SELECT * FROM TP X JOIN (SELECT  
@@ -1152,6 +1284,9 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                     `
                     WITH TP AS (select wnrgt as Numero_reglement,
                         wnupo as police,
+                        cheque,
+                        wasrg as assure,
+                        date_naiss,
                         nom_beneficiaire,
                         date_depot_treso,
                         date_sort_treso,
@@ -1161,7 +1296,7 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
                         dateRDV,
                         Num_envoi,
                         statut_reg_retirer as statut,
-                        domaine,redac,
+                        domaine,redac,banque,
                         MNTGT as montant,MRGGT as mode_reglement
                 from exp.regdispo where domaine = 'R' and wnupo=${parseInt(req.params.num_police,10)})
                 SELECT * FROM TP X JOIN (SELECT  
@@ -1261,6 +1396,9 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
         let query=`
         WITH TP AS (select wnrgt as Numero_reglement,
             wnupo as police,
+            cheque,
+            wasrg as assure,
+            date_naiss,
             nom_beneficiaire,
             date_depot_treso,
             date_sort_treso,
@@ -1270,7 +1408,7 @@ apiRouter.route('/statutRgt/:num_police/:num_rgt/:domaine/:full/:offset').get(ca
             dateRDV,
             Num_envoi,
             statut_reg_retirer as statut,
-            domaine,redac,
+            domaine,redac,banque,
             MNTGT as montant,MRGGT as mode_reglement
      from exp.regdispo where domaine = '${req.params.domaine}' and wnrgt=${parseInt(req.params.num_rgt,10)})
      SELECT * FROM TP X JOIN (SELECT  
@@ -1340,6 +1478,9 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
         let domaineQueries=[`
             WITH TP AS (select wnrgt as Numero_reglement,
                 wnupo as police,
+                cheque,
+                wasrg as assure,
+                date_naiss,
                 nom_beneficiaire,
                 date_depot_treso,
                 date_sort_treso,
@@ -1349,7 +1490,7 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
                 dateRDV,
                 Num_envoi,
                 statut_reg_retirer as statut,
-                domaine,redac,
+                domaine,redac,banque,
                 MNTGT as montant,MRGGT as mode_reglement
          from exp.regdispo where domaine = 'I' and wnrgt=${parseInt(req.params.num_rgt,10)})
          SELECT * FROM TP X JOIN (SELECT  
@@ -1414,6 +1555,9 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
             `,`
             WITH TP AS (select wnrgt as Numero_reglement,
                 wnupo as police,
+                cheque,
+                wasrg as assure,
+                date_naiss,
                 nom_beneficiaire,
                 date_depot_treso,
                 date_sort_treso,
@@ -1423,7 +1567,7 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
                 dateRDV,
                 Num_envoi,
                 statut_reg_retirer as statut,
-                domaine,redac,
+                domaine,redac,banque,
                 MNTGT as montant,MRGGT as mode_reglement
          from exp.regdispo where domaine = 'G' and wnrgt=${parseInt(req.params.num_rgt,10)})
          SELECT * FROM TP X JOIN (SELECT  
@@ -1489,6 +1633,9 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
             `
             WITH TP AS (select wnrgt as Numero_reglement,
                 wnupo as police,
+                cheque,
+                wasrg as assure,
+                date_naiss,
                 nom_beneficiaire,
                 date_depot_treso,
                 date_sort_treso,
@@ -1498,7 +1645,7 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
                 dateRDV,
                 Num_envoi,
                 statut_reg_retirer as statut,
-                domaine,redac,
+                domaine,redac,banque,
                 MNTGT as montant,MRGGT as mode_reglement
          from exp.regdispo where domaine = 'R' and wnrgt=${parseInt(req.params.num_rgt,10)})
          SELECT * FROM TP X JOIN (SELECT  
@@ -1582,6 +1729,9 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
             ROW_NUMBER() OVER(ORDER BY date_depot_treso) as rowno, 
             wnrgt as Numero_reglement,
             wnupo as police,
+            cheque,
+            wasrg as assure,
+            date_naiss,
             nom_beneficiaire,
             date_depot_treso,
             date_sort_treso,
@@ -1591,9 +1741,9 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
             dateRDV,
             Num_envoi,
             statut_reg_retirer as statut,
-            domaine,redac,
+            domaine,redac,banque,
             MNTGT as montant,MRGGT as mode_reglement
-     from exp.regdispo where domaine = 'R' and date_depot_treso IS NOT NULL
+     from exp.regdispo where domaine = 'I' and date_depot_treso IS NOT NULL
     )
          SELECT * FROM TP X JOIN (SELECT  
             SUBSTRING(CONVERT(VARCHAR,DTSSD),1,4)+'-'+SUBSTRING(CONVERT(VARCHAR,DTSSD),5,2)+'-'+SUBSTRING(CONVERT(VARCHAR,DTSSD),7,2) AS DATE_SURVENANCE_SINISTRE
@@ -1660,6 +1810,9 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
                 ROW_NUMBER() OVER(ORDER BY date_depot_treso) as rowno, 
                 wnrgt as Numero_reglement,
                 wnupo as police,
+                cheque,
+                wasrg as assure,
+                date_naiss,
                 nom_beneficiaire,
                 date_depot_treso,
                 date_sort_treso,
@@ -1669,7 +1822,7 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
                 dateRDV,
                 Num_envoi,
                 statut_reg_retirer as statut,
-                domaine,redac,
+                domaine,redac,banque,
                 MNTGT as montant,MRGGT as mode_reglement
          from exp.regdispo where domaine = 'G' and date_depot_treso IS NOT NULL
                 )
@@ -1739,6 +1892,9 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
                 ROW_NUMBER() OVER(ORDER BY date_depot_treso) as rowno, 
                 wnrgt as Numero_reglement,
                 wnupo as police,
+                cheque,
+                wasrg as assure,
+                date_naiss,
                 nom_beneficiaire,
                 date_depot_treso,
                 date_sort_treso,
@@ -1748,7 +1904,7 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
                 dateRDV,
                 Num_envoi,
                 statut_reg_retirer as statut,
-                domaine,redac,
+                domaine,redac,banque,
                 MNTGT as montant,MRGGT as mode_reglement
          from exp.regdispo where domaine = 'R' and date_depot_treso IS NOT NULL
         
@@ -1815,6 +1971,7 @@ ON XX.NUMERO_REGLEMENT = X.Numero_reglement
             `
         ];
         result= domaineQueries.map((q,i)=>{
+            console.log(q);
             return getConnection("sunshine").manager.query(q);
     });
         res.json(await Promise.all(result));   
@@ -1884,6 +2041,16 @@ apiRouter.route('/getAuthChapChap/:login/:password').get(cache.route({
         }
     }
     
+    return res.json(result);
+});
+//WS pour module treso
+apiRouter.route('/decompteVir/:datejour').get(async(req,res)=>{
+    if(isNaN(parseInt(req.params.datejour,10)) && req.params.datejour.length!=8){
+        return res.status(400).send({error:"Veuillez verifier la valeur date fournie elle est au format AAAAMMJJ"});
+    }
+    let query=`exec dbo.wsi_info_dec_reglement @datejour=${req.params.datejour}`;
+    let aven=await getConnection("sunshine").manager.query(query);
+    let result=aven;
     return res.json(result);
 });
 apiRouter.route('/authChapChap').post(async(req,res)=>{
